@@ -27,11 +27,14 @@ fun MonthYearSelector(
     onMonthChange: (Int) -> Unit,
     onStatsClick: () -> Unit,
     onExportClick: () -> Unit,
+    onExportAllClick: () -> Unit,
+    onCategoryClick: () -> Unit,
+    onBatchModeClick: () -> Unit,
+    isBatchMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showYearPicker by remember { mutableStateOf(false) }
-    var showMonthPicker by remember { mutableStateOf(false) }
-
+    
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.primary,
@@ -69,16 +72,35 @@ fun MonthYearSelector(
                         )
                     }
 
-                    Column(
-                        modifier = Modifier.clickable { showYearPicker = true },
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "${currentYear}年",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
+                    Box {
+                        TextButton(onClick = { showYearPicker = true }) {
+                            Text(
+                                text = "${currentYear}年",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showYearPicker,
+                            onDismissRequest = { showYearPicker = false }
+                        ) {
+                            availableYears.forEach { year ->
+                                DropdownMenuItem(
+                                    text = { Text("${year}年") },
+                                    onClick = {
+                                        onYearChange(year)
+                                        showYearPicker = false
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("更多...") },
+                                onClick = {
+                                    showYearPicker = false
+                                }
+                            )
+                        }
                     }
 
                     IconButton(onClick = {
@@ -106,7 +128,19 @@ fun MonthYearSelector(
                         Text("统计", color = Color.White)
                     }
                     TextButton(onClick = onExportClick) {
-                        Text("导出", color = Color.White)
+                        Text("本月", color = Color.White)
+                    }
+                    TextButton(onClick = onExportAllClick) {
+                        Text("全量", color = Color.White)
+                    }
+                    TextButton(onClick = onCategoryClick) {
+                        Text("分类", color = Color.White)
+                    }
+                    TextButton(onClick = onBatchModeClick) {
+                        Text(
+                            text = if (isBatchMode) "完成" else "批量",
+                            color = if (isBatchMode) Color.Yellow else Color.White
+                        )
                     }
                 }
             }

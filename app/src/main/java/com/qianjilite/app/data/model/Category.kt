@@ -1,10 +1,69 @@
 package com.qianjilite.app.data.model
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.vector.ImageVector
+
 data class Category(
     val name: String,
     val type: TransactionType,
-    val isDefault: Boolean = true
+    val isDefault: Boolean = true,
+    val icon: ImageVector = Icons.Default.Star
 )
+
+object CategoryIcons {
+    val availableIcons = listOf(
+        Icons.Default.Restaurant,
+        Icons.Default.Movie,
+        Icons.Default.ShoppingCart,
+        Icons.Default.DirectionsCar,
+        Icons.Default.LocalHospital,
+        Icons.Default.School,
+        Icons.Default.Home,
+        Icons.Default.Phone,
+        Icons.Default.Checkroom,
+        Icons.Default.FitnessCenter,
+        Icons.Default.Pets,
+        Icons.Default.MoreHoriz,
+        Icons.Default.Work,
+        Icons.Default.Savings,
+        Icons.Default.AttachMoney,
+        Icons.Default.TrendingUp,
+        Icons.Default.CardGiftcard,
+        Icons.Default.Undo,
+        Icons.Default.Star,
+        Icons.Default.Favorite,
+        Icons.Default.Book,
+        Icons.Default.MusicNote,
+        Icons.Default.SportsEsports,
+        Icons.Default.Flight,
+        Icons.Default.LocalCafe
+    )
+
+    fun getIconForCategory(name: String, type: TransactionType): ImageVector {
+        return when (name) {
+            "三餐", "餐饮" -> Icons.Default.Restaurant
+            "娱乐" -> Icons.Default.Movie
+            "购物" -> Icons.Default.ShoppingCart
+            "交通" -> Icons.Default.DirectionsCar
+            "医疗" -> Icons.Default.LocalHospital
+            "教育" -> Icons.Default.School
+            "住房" -> Icons.Default.Home
+            "通讯", "水电" -> Icons.Default.Phone
+            "服装" -> Icons.Default.Checkroom
+            "健身", "运动" -> Icons.Default.FitnessCenter
+            "数码产品" -> Icons.Default.Devices
+            "工资" -> Icons.Default.Work
+            "理财" -> Icons.Default.Savings
+            "利息" -> Icons.Default.AttachMoney
+            "奖金" -> Icons.Default.TrendingUp
+            "红包" -> Icons.Default.CardGiftcard
+            "退款" -> Icons.Default.Undo
+            "兼职" -> Icons.Default.Person
+            else -> if (type == TransactionType.EXPENSE) Icons.Default.MoreHoriz else Icons.Default.Star
+        }
+    }
+}
 
 object DefaultCategories {
     val expenseCategories = listOf(

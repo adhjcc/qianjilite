@@ -25,6 +25,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions ORDER BY year DESC, month DESC, day DESC, hour DESC, minute DESC")
     fun getAllTransactions(): Flow<List<Transaction>>
 
+    @Query("SELECT * FROM transactions ORDER BY year DESC, month DESC, day DESC, hour DESC, minute DESC")
+    suspend fun getAllTransactionsList(): List<Transaction>
+
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getTransactionById(id: Long): Transaction?
 
@@ -45,4 +48,7 @@ interface TransactionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(transactions: List<Transaction>)
+
+    @Query("DELETE FROM transactions WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
 }

@@ -2,6 +2,7 @@ package com.qianjilite.app.data.repository
 
 import android.content.Context
 import android.os.Environment
+import com.qianjilite.app.data.local.AppDatabase
 import com.qianjilite.app.data.model.Transaction
 import com.qianjilite.app.data.model.TransactionType
 import org.apache.poi.ss.usermodel.*
@@ -67,6 +68,78 @@ class ExcelManager(private val context: Context) {
                 exportDir.mkdirs()
             }
             val fileName = "qianji_export_${fileNameFormat.format(Date())}.xlsx"
+            val file = if (exportDir != null) File(exportDir, fileName) else File(context.filesDir, fileName)
+
+            FileOutputStream(file).use { outputStream ->
+                workbook.write(outputStream)
+            }
+            workbook.close()
+
+            Result.success(file)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun exportAllToExcel(context: android.content.Context): Result<File> {
+        return try {
+            val transactions = TransactionRepository(
+                AppDatabase.getDatabase(context).transactionDao(),
+                AppDatabase.getDatabase(context).customCategoryDao()
+            ).getAllTransactionsList()
+
+            if (transactions.isEmpty()) {
+                return Result.failure(Exception("没有数据可导出"))
+            }
+
+            val workbook = XSSFWorkbook()
+            val sheet = workbook.createSheet("全部账单")
+
+            val headerStyle = workbook.createCellStyle().apply {
+                val font = workbook.createFont().apply {
+                    bold = true
+                }
+                setFont(font)
+                fillForegroundColor = IndexedColors.LIGHT_BLUE.index
+                fillPattern = FillPatternType.SOLID_FOREGROUND
+            }
+
+            val headerRow = sheet.createRow(0)
+            val headers = listOf("ID", "类型", "金额", "分类", "备注", "时间", "年份", "月份", "日期", "小时", "分钟")
+            headers.forEachIndexed { index, header ->
+                headerRow.createCell(index).apply {
+                    setCellValue(header)
+                    cellStyle = headerStyle
+                }
+            }
+
+            transactions.forEachIndexed { index, transaction ->
+                val row = sheet.createRow(index + 1)
+                row.createCell(0).setCellValue(transaction.id.toDouble())
+                row.createCell(1).setCellValue(if (transaction.type == TransactionType.EXPENSE) "支出" else "收入")
+                row.createCell(2).setCellValue(transaction.amount)
+                row.createCell(3).setCellValue(transaction.category)
+                row.createCell(4).setCellValue(transaction.note)
+                row.createCell(5).setCellValue(dateFormat.format(Date(transaction.timestamp)))
+                row.createCell(6).setCellValue(transaction.year.toDouble())
+                row.createCell(7).setCellValue(transaction.month.toDouble())
+                row.createCell(8).setCellValue(transaction.day.toDouble())
+                row.createCell(9).setCellValue(transaction.hour.toDouble())
+                row.createCell(10).setCellValue(transaction.minute.toDouble())
+            }
+
+            sheet.setColumnWidth(0, 2000)
+            sheet.setColumnWidth(1, 3000)
+            sheet.setColumnWidth(2, 5000)
+            sheet.setColumnWidth(3, 4000)
+            sheet.setColumnWidth(4, 8000)
+            sheet.setColumnWidth(5, 6000)
+
+            val exportDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+            if (exportDir != null && !exportDir.exists()) {
+                exportDir.mkdirs()
+            }
+            val fileName = "qianji_all_${fileNameFormat.format(Date())}.xlsx"
             val file = if (exportDir != null) File(exportDir, fileName) else File(context.filesDir, fileName)
 
             FileOutputStream(file).use { outputStream ->

@@ -22,6 +22,10 @@ class TransactionRepository(
         return transactionDao.getAllTransactions()
     }
 
+    suspend fun getAllTransactionsList(): List<Transaction> {
+        return transactionDao.getAllTransactionsList()
+    }
+
     suspend fun addTransaction(transaction: Transaction): Long {
         return transactionDao.insert(transaction)
     }
@@ -87,6 +91,10 @@ class TransactionRepository(
     suspend fun clearAndImportTransactions(transactions: List<Transaction>) {
         transactionDao.deleteAll()
         transactionDao.insertAll(transactions)
+    }
+
+    suspend fun deleteTransactionsByIds(ids: List<Long>) {
+        transactionDao.deleteByIds(ids)
     }
 }
 

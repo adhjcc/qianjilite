@@ -27,7 +27,9 @@ data class TransactionUiState(
     val incomeCategories: List<Category> = DefaultCategories.incomeCategories,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val isBatchMode: Boolean = false,
+    val selectedTransactionIds: Set<Long> = emptySet()
 )
 
 class TransactionViewModel(application: Application) : AndroidViewModel(application) {
@@ -199,6 +201,11 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         return result
     }
 
+    suspend fun exportAllData(): Result<File> {
+        val result = excelManager.exportAllToExcel(getApplication<Application>())
+        return result
+    }
+
     fun importData(file: File): Result<Int> {
         return try {
             val result = excelManager.importFromExcel(file)
@@ -238,5 +245,54 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     fun loadYearlyData() {
         loadYearlyStats()
+    }
+
+    fun toggleBatchMode() {
+        _uiState.update { state ->
+            state.copy(
+                isBatchMode = !state.isBatchMode,
+                selectedTransactionIds = if (state.isBatchMode) emptySet() else state.selectedTransactionIds
+            )
+        }
+    }
+
+    fun toggleTransactionSelection(transactionId: Long) {
+        _uiState.update { state ->
+            val newSelection = if (state.selectedTransactionIds.contains(transactionId)) {
+                state.selectedTransactionIds - transactionId
+            } else {
+                state.selectedTransactionIds + transactionId
+            }
+            state.copy(selectedTransactionIds = newSelection)
+        }
+    }
+
+    fun selectAllTransactions() {
+        _uiState.update { state ->
+            val allIds = state.transactions.map { it.id }.toSet()
+            state.copy(selectedTransactionIds = allIds)
+        }
+    }
+
+    fun clearSelection() {
+        _uiState.update { it.copy(selectedTransactionIds = emptySet()) }
+    }
+
+    fun deleteSelectedTransactions() {
+        val selectedIds = _uiState.value.selectedTransactionIds.toList()
+        if (selectedIds.isEmpty()) return
+        
+        viewModelScope.launch {
+            repository.deleteTransactionsByIds(selectedIds)
+            _uiState.update { state ->
+                state.copy(
+                    selectedTransactionIds = emptySet(),
+                    isBatchMode = false,
+                    successMessage = "删除成功"
+                )
+            }
+            loadAvailableDates()
+            loadTransactions()
+        }
     }
 }

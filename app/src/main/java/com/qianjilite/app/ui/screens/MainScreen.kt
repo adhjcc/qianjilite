@@ -1,17 +1,15 @@
 package com.qianjilite.app.ui.screens
 
 import android.net.Uri
-import android.os.Build
-import android.view.WindowInsetsController
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +26,7 @@ import com.qianjilite.app.ui.components.*
 import com.qianjilite.app.ui.theme.ExpenseColor
 import com.qianjilite.app.ui.theme.IncomeColor
 import com.qianjilite.app.viewmodel.TransactionViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,9 +35,11 @@ fun MainScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var showStats by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
 
     LaunchedEffect(Unit) {
@@ -63,10 +64,10 @@ fun MainScreen(
                 val result = viewModel.importData(file)
                 result.fold(
                     onSuccess = { count ->
-                        // Import successful
+                        viewModel.setSuccessMessage("导入成功，共 $count 条记录")
                     },
                     onFailure = { error ->
-                        // Handle error
+                        viewModel.setErrorMessage(error.message ?: "导入失败")
                     }
                 )
             }
@@ -92,29 +93,67 @@ fun MainScreen(
                     val result = viewModel.exportData()
                     result.fold(
                         onSuccess = { file ->
-                            viewModel.setSuccessMessage("导出成功: ${file.name}")
+                            viewModel.setSuccessMessage("本月导出成功: ${file.name}")
                         },
                         onFailure = { error ->
                             viewModel.setErrorMessage(error.message ?: "导出失败")
                         }
                     )
-                }
+                },
+                onExportAllClick = {
+                    scope.launch {
+                        val result = viewModel.exportAllData()
+                        result.fold(
+                            onSuccess = { file ->
+                                viewModel.setSuccessMessage("全量导出成功: ${file.name}")
+                            },
+                            onFailure = { error ->
+                                viewModel.setErrorMessage(error.message ?: "导出失败")
+                            }
+                        )
+                    }
+                },
+                onCategoryClick = {
+                    showCategoryDialog = true
+                },
+                onBatchModeClick = viewModel::toggleBatchMode,
+                isBatchMode = uiState.isBatchMode
             )
         },
         floatingActionButton = {
-            Column {
-                FloatingActionButton(
-                    onClick = { filePickerLauncher.launch("*/*") },
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                ) {
-                    Icon(Icons.Default.FileUpload, contentDescription = "导入")
+            if (uiState.isBatchMode) {
+                Column {
+                    if (uiState.selectedTransactionIds.isNotEmpty()) {
+                        FloatingActionButton(
+                            onClick = viewModel::deleteSelectedTransactions,
+                            containerColor = ExpenseColor,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "删除选中")
+                        }
+                    }
+                    FloatingActionButton(
+                        onClick = viewModel::selectAllTransactions,
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ) {
+                        Text("全选", color = Color.White)
+                    }
                 }
-                FloatingActionButton(
-                    onClick = { showAddDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "记账")
+            } else {
+                Column {
+                    FloatingActionButton(
+                        onClick = { filePickerLauncher.launch("*/*") },
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
+                        Icon(Icons.Default.FileUpload, contentDescription = "导入")
+                    }
+                    FloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "记账")
+                    }
                 }
             }
         },
@@ -161,7 +200,11 @@ fun MainScreen(
                             TransactionItem(
                                 transaction = transaction,
                                 onEdit = { editingTransaction = it },
-                                onDelete = { viewModel.deleteTransaction(it) }
+                                onDelete = { viewModel.deleteTransaction(it) },
+                                isSelected = uiState.selectedTransactionIds.contains(transaction.id),
+                                onSelectChange = if (uiState.isBatchMode) {
+                                    { viewModel.toggleTransactionSelection(transaction.id) }
+                                } else null
                             )
                         }
                     }
@@ -211,6 +254,16 @@ fun MainScreen(
             currentYear = uiState.currentYear,
             currentMonth = uiState.currentMonth,
             onBack = { showStats = false }
+        )
+    }
+
+    if (showCategoryDialog) {
+        CategoryManagementDialog(
+            expenseCategories = uiState.expenseCategories,
+            incomeCategories = uiState.incomeCategories,
+            onDismiss = { showCategoryDialog = false },
+            onAddCategory = viewModel::addCustomCategory,
+            onDeleteCategory = viewModel::deleteCustomCategory
         )
     }
 
