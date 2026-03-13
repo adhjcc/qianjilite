@@ -324,10 +324,6 @@ UI (Compose) -> ViewModel -> Repository -> Room Database
 
 MIT License
 
-## 说明
-
-本项目仅供本人个人使用。
-
 ## 致谢
 
 - 参考了[钱迹](https://qianjiapp.com)记账app的设计理念
